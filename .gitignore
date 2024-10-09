@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+
+package-lock.json
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database files (MongoDB specific)
+dump/
+*.lock
+*.pid
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+
+# Optional: Coverage reports (if you use a testing framework)
+coverage/
+
+# Optional: Build files (if you transpile your code)
+dist/
+build/
+
+# Optional: Temporary files
+tmp/
+temp/
