@@ -24,7 +24,7 @@ exports.modifyBook = (req, res, next) => {
       const bookUpdate = {
         ...req.body,
         _id: req.params.id,
-        // Utilisation d'une ternaire pour déterminer l'URL de l'image
+        // Déterminer si l'image a été modifiée
         imageUrl: req.file 
           ? `${req.protocol}://${req.get('host')}/images/${req.file.filename}` 
           : book.imageUrl
