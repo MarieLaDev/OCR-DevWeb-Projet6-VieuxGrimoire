@@ -41,7 +41,7 @@ exports.createBook = (req, res, next) =>{
       });
 
       // Suppression de l'image temporaire
-      fs.unlink(req.file.path, (err) => {
+      fs.unlink(inputPath, (err) => {
         if (err) {
           console.error(`Erreur lors de la suppression de l'image temporaire : ${err}`);
         } else {
@@ -79,6 +79,7 @@ exports.modifyBook = (req, res, next) => {
       .then(() => {
         console.log(`où on va supprimer l'image ? : images/${inputPath}`);
 
+        // Suppression de l'image temporaire
         fs.unlink(inputPath, (err) => {
           if (err) {
             console.error(`Erreur lors de la suppression de l'image : ${err}`);
