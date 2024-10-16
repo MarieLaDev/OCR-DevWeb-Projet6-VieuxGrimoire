@@ -12,11 +12,11 @@ const app = express();
 // Middleware pour parser les corps de requête JSON
 app.use(express.json()); 
 
-// Middleware express-fileupload pour recevoir les files sans multer avec req.files
-app.use(fileUpload());
-
 // Permet la reconnaissance des tableaux à l'intérieur d'un objet
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware express-fileupload pour recevoir les files sans multer avec req.files
+app.use(fileUpload());
 
 mongoose.connect(process.env.DB_HOST)
   .then(() => console.log('Connexion à MongoDB réussie !'))
