@@ -1,22 +1,21 @@
 const sharp = require('sharp');
-const path = require('path');
-const books = require('../models/books');
 const Book = require('../models/books');
 const fs = require('fs');
 
-const compressImage = (reqFile, inputPath) => {
+const compressImage = (reqFile) => {
+  
   // originalName => Nom du fichier sans extension
-  const originalName = reqFile.originalname.split('.')[0]; 
+  const originalName = reqFile.name.split('.')[0]; 
   const timestamp = Date.now(); 
   const newFileName = `${originalName}${timestamp}.webp`; 
   const outputPath = `images/${newFileName}`; 
 
-  return sharp(inputPath)
+  return sharp(reqFile.data)
     .resize({ width: 500 })
     .toFormat('webp', { quality: 80 }) 
     .toFile(outputPath)
     .then(() => {
-      console.log(`Image compressée et sauvegardée sous ${outputPath} / Le fichier temporaire est enregistré sous : ${inputPath}`);
+      console.log(`Image compressée et sauvegardée sous ${outputPath}`);
       return { outputPath };
     })
     .catch(err => {
@@ -25,6 +24,7 @@ const compressImage = (reqFile, inputPath) => {
 };
 
 exports.createBook = (req, res, next) =>{  
+  console.log(req.files); 
   if (!req.auth || !req.auth.userId) {
     return res.status(401).json({ message: "Non autorisé" });
   }
@@ -32,21 +32,12 @@ exports.createBook = (req, res, next) =>{
   delete bookObject._id;
   delete bookObject._userId;
 
-  compressImage(req.file, req.file.path)
+  compressImage(req.files.image)
     .then(({ outputPath }) => {
       const book = new Book({
         ...bookObject,
         userId: req.auth.userId,
         imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
-      });
-
-      // Suppression de l'image temporaire
-      fs.unlink(inputPath, (err) => {
-        if (err) {
-          console.error(`Erreur lors de la suppression de l'image temporaire : ${err}`);
-        } else {
-          console.log("Fichier temporaire supprimé !!!");
-        }
       });
 
       return book.save()
@@ -56,17 +47,22 @@ exports.createBook = (req, res, next) =>{
 }
 
 exports.modifyBook = (req, res, next) => {
+  console.log("Corps de la requête:", req.body);
+  console.log("req.files :", req.files);
+
   if (!req.auth || !req.auth.userId) {
     return res.status(401).json({ message: "Non autorisé" });
   }
 
   const bookObject = JSON.parse(req.body.book);
   
-  if (req.file) {
+  if (req.files && req.files.image) {
     Book.findOne({_id: req.params.id})
     .then(book => {
       const filename = book.imageUrl.split('/images/')[1];
       
+      console.log(filename);
+
       // Supprimer l'ancienne image
       fs.unlink(`images/${filename}`, (err) => {
         if (err) {
@@ -75,31 +71,34 @@ exports.modifyBook = (req, res, next) => {
       });
     })
     .catch(error => res.status(500).json({error}));
-    compressImage(req.file, req.file.path) 
-      .then(() => {
-        console.log(`où on va supprimer l'image ? : images/${inputPath}`);
+    compressImage(req.files.image)
+      .then(({ outputPath }) => {
+        if (!outputPath) {
+          throw new Error("Le chemin de l'image compressée est introuvable.");
+        }
 
-        // Suppression de l'image temporaire
-        fs.unlink(inputPath, (err) => {
-          if (err) {
-            console.error(`Erreur lors de la suppression de l'image : ${err}`);
-          } else {
-            console.log("Fichier temporaire supprimé !!!");
-          }
-        });
-  
-        // Mettre à jour le livre avec le nouveau nom de fichier
+        // Log pour vérifier les valeurs envoyées à MongoDB
+        const updatedBookData = {
+          ...bookObject,
+          _id: req.params.id,
+          imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
+        };
+        
+        console.log("Données mises à jour du livre : ", updatedBookData);
+        
         return Book.updateOne(
           { _id: req.params.id },
-          {
-            ...bookObject,
-            _id: req.params.id,
-            imageUrl: `${req.protocol}://${req.get('host')}/images/${newFileName}`,
-          }
+          updatedBookData
         );
       })
-      .then(() => res.status(201).json({ message: "Livre modifié !" }))
-      .catch(error => res.status(400).json({ error }));
+      .then(() => {
+        console.log("Mise à jour du livre réussie avec la nouvelle URL de l'image");
+        res.status(201).json({ message: "Livre modifié avec succès !" });
+      })
+      .catch(error => {
+        console.error("Erreur lors de la mise à jour du livre avec la nouvelle image :", error);
+        res.status(400).json({ error });
+      });
   } else {
     // Si aucune nouvelle image n'est fournie
     Book.updateOne(

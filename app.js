@@ -1,4 +1,5 @@
 const express = require('express');
+const fileUpload = require('express-fileupload');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const morgan = require('morgan');
@@ -10,6 +11,12 @@ const app = express();
 
 // Middleware pour parser les corps de requête JSON
 app.use(express.json()); 
+
+// Middleware express-fileupload pour recevoir les files sans multer avec req.files
+app.use(fileUpload());
+
+// Permet la reconnaissance des tableaux à l'intérieur d'un objet
+app.use(express.urlencoded({ extended: true }));
 
 mongoose.connect(process.env.DB_HOST)
   .then(() => console.log('Connexion à MongoDB réussie !'))
