@@ -48,15 +48,13 @@ exports.createBook = (req, res, next) =>{
 
 exports.modifyBook = (req, res, next) => {
   console.log("Corps de la requête:", req.body);
-  console.log("req.files :", req.files);
 
   if (!req.auth || !req.auth.userId) {
     return res.status(401).json({ message: "Non autorisé" });
   }
-
-  const bookObject = JSON.parse(req.body.book);
   
   if (req.files && req.files.image) {
+    let bookObject = JSON.parse(req.body.book);
     Book.findOne({_id: req.params.id})
     .then(book => {
       const filename = book.imageUrl.split('/images/')[1];
@@ -100,6 +98,7 @@ exports.modifyBook = (req, res, next) => {
         res.status(400).json({ error });
       });
   } else {
+    let bookObject = req.body;
     // Si aucune nouvelle image n'est fournie
     Book.updateOne(
       { _id: req.params.id },
