@@ -1,21 +1,29 @@
 const bcrypt = require('bcrypt');
 const jsonToken = require('jsonwebtoken');
-
+require('dotenv').config();
 const USER = require('../models/users');
+const { EmailAlreadyExistsError } = require('../utils/errors');
 
 exports.signup = (req, res, next) => {
-  bcrypt.hash(req.body.password, 10)
-    .then(hash => {
-      const user = new USER({
-        email: req.body.email,
-        password: hash
-      });
-      user.save()
-        .then(() => res.status(201).json({ message: 'Utilisateur créé avec succès !'}))
-        .catch(error => res.status(400).json({error}));
+  // Vérifie si l'utilisateur existe déjà
+  USER.findOne({ email: req.body.email })
+    .then(existingUser => {
+      if (existingUser) {
+        return next(new EmailAlreadyExistsError());
+      }
+      
+      bcrypt.hash(req.body.password, 10)
+        .then(hash => {
+          const user = new USER({
+            email: req.body.email,
+            password: hash
+          });
+          return user.save(); 
+        })
+        .then(() => res.status(201).json({ message: 'Utilisateur créé avec succès !' }))
+        .catch(error => res.status(500).json({ message: error }));
     })
-    .catch(error => res.status(500).json({error}));
-}
+};
 
 exports.login = (req, res, next) => {
   USER.findOne({email: req.body.email})
@@ -29,7 +37,7 @@ exports.login = (req, res, next) => {
           valid ?
             res.status(200).json({userId: user._id, token: jsonToken.sign(
               { userId: user._id },
-              "RANDOM_ONE_TOKEN_SECRET",
+              process.env.SECRET_TOKEN,
               { expiresIn: '24h'}
             )})
             : res.status(401).json({message: 'Accès non autorisé !'}))

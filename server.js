@@ -1,6 +1,8 @@
+// Module HTTP de Node.js pour créer un serveur
 const http = require('http');
 const app = require('./app');
 
+// Vérifie que le port est valide
 const normalizePort = val => {
   const port = parseInt(val, 10);
 
@@ -12,9 +14,11 @@ const normalizePort = val => {
   }
   return false;
 };
+
 const port = normalizePort(process.env.PORT || '4000');
 app.set('port', port);
 
+// Gère les erreurs sur l'écoute du serveur
 const errorHandler = error => {
   if (error.syscall !== 'listen') {
     throw error;
@@ -38,6 +42,7 @@ const errorHandler = error => {
 const server = http.createServer(app);
 
 server.on('error', errorHandler);
+
 server.on('listening', () => {
   const address = server.address();
   const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
