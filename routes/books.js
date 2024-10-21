@@ -1,13 +1,14 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const validateFile = require('../middleware/validateFile');
 const bookCtrl = require('../controllers/books');
 const router = express.Router();
 
 router.get('/bestrating', bookCtrl.getBestRatingBooks);
 
-router.post('/', auth, bookCtrl.createBook);
+router.post('/', auth, validateFile, bookCtrl.createBook);
 
-router.put('/:id', auth, bookCtrl.modifyBook);
+router.put('/:id', auth, validateFile, bookCtrl.modifyBook);
 
 router.delete('/:id', auth, bookCtrl.deleteBook);
 
