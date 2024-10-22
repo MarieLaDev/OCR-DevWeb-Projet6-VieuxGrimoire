@@ -7,8 +7,12 @@ const userRoutes = require('./routes/user');
 const reqLimit = require('./middleware/reqLimit');
 const path = require('path');
 const errorMiddleware = require('./middleware/errorsMiddleware');
+const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require("helmet");
 
 const app = express();
+
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 // Limite le nombre de requêtes en un temps donné (middleware reqLimit.js)
 app.use(reqLimit);
@@ -16,6 +20,8 @@ app.use(reqLimit);
 app.use(fileUpload());
 
 app.use(express.json());
+
+app.use(mongoSanitize());
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -39,6 +45,6 @@ app.use((req, res, next) => {
 app.use('/api/books', booksRoutes);
 app.use('/api/auth', userRoutes);
 
-//app.use(errorMiddleware);
+app.use(errorMiddleware);
 
 module.exports = app;

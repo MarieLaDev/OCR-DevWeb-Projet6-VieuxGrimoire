@@ -40,7 +40,8 @@ exports.createBook = (req, res, next) => {
 }
 
 exports.modifyBook = (req, res, next) => {
-  console.log('Corps de la requête pour mofifier un livre:', req.body);
+  console.log('Corps de la requête pour modifier un livre:', req.body);
+  
   if (!req.auth || !req.auth.userId) {
     return res.status(401).json({ message: "Non autorisé" });
   }
@@ -142,30 +143,24 @@ exports.getBestRatingBooks = (req, res, next) => {
 }
 
 exports.createRating = (req, res, next) => {
-  console.log("req.body:", req.body);
   if ( req.body.rating < 0 || req.body.rating > 5 ) {
     return res.status(400).json({ message : 'La note doit être comprise entre 0 et 5'})
   }
-
-  console.log("req.body.rating : ", req.body.rating);
   
   Book.findOne({ _id: req.params.id })
     .then((book) => {
       // Vérification si l'utilisateur a déjà noté ce livre
       const existingRating = book.ratings.find(rate => rate.userId === req.auth.userId);
-      console.log("existingRating : ", existingRating);
 
       if (existingRating) {
         return res.status(400).json({ message: 'Vous avez déjà voté' });
 
       } else {
         // Ajout de la nouvelle note
-        console.log("req.auth.userId : ", req.auth.userId, )
         book.ratings.push({ userId: req.auth.userId, grade: Math.round(req.body.rating) });
 
         // Calcul de la nouvelle moyenne
         const totalRatings = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
-        console.log("totalRatings : ", totalRatings)
         book.averageRating = Math.round(totalRatings / book.ratings.length);
         console.log("book.averageRating : ", book.averageRating);
 
