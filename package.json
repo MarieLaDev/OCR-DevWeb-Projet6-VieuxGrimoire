@@ -20,7 +20,7 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.1",
-    "mongoose-unique-validator": "^4.0.1",
+    "mongoose-unique-validator": "^5.0.1",
     "sharp": "^0.33.5"
   }
 }

@@ -2,112 +2,87 @@
 const Book = require('../models/books');
 const fs = require('fs');
 const compressImage = require('../middleware/compressImage');
+require('dotenv').config();
 
-exports.createBook = (req, res, next) => {  
-  console.log('Corps de la requête pour créer un livre:', req.body);
-  if (!req.auth || !req.auth.userId) {
-    return res.status(401).json({ message: "Non autorisé" });
-  }
-  
-  const bookObject = JSON.parse(req.body.book);
-  delete bookObject._id;
-  delete bookObject._userId;
 
-  // Vérifie que le fichier est bien reçu
-  if (!req.files || !req.files.image) {
-    console.log("Pb de fichier");
-    return res.status(400).json({ message: "Image manquante ou non valide." });
-  }
+exports.createBook = async (req, res, next) => {
+  try {
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
 
-  console.log("fichier reçu : " + req.files.image);
+    const bookObject = JSON.parse(req.body.book);
+    delete bookObject._id;
+    delete bookObject._userId;
 
-  compressImage(req.files.image)
-    .then(({ outputPath }) => {
-      console.log(outputPath);
+    // Compression de l'image
+    const { outputPath } = await compressImage(req.files.image);
 
-      const book = new Book({
-        ...bookObject,
-        userId: req.auth.userId,
-        imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
-      });
-
-    return book.save()
-    })  
-    .then(() => res.status(201).json({ message: "Livre enregistré ! "}))
-    .catch(error => {
-      return res.status(400).json({ message: 'Erreur lors de l\'enregistrement du livre.' });
+    // Création du livre avec les informations reçues
+    const book = new Book({
+      ...bookObject,
+      userId: req.auth.userId,
+      imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
     });
-}
 
-exports.modifyBook = (req, res, next) => {
-  console.log('Corps de la requête pour modifier un livre:', req.body);
-  
-  if (!req.auth || !req.auth.userId) {
-    return res.status(401).json({ message: "Non autorisé" });
+    // Sauvegarde du livre
+    await book.save();
+
+    res.status(201).json({ message: "Livre enregistré !" });
+  } catch (error) {
+    res.status(400).json({ message: 'Erreur lors de l\'enregistrement du livre.' });
   }
-  
-  if (req.files && req.files.image) {
-    let bookObject = JSON.parse(req.body.book);
-    Book.findOne({_id: req.params.id})
-    .then(book => {
-      const filename = book.imageUrl.split('/images/')[1];
+};
 
-      // Supprimer l'ancienne image
+exports.modifyBook = async (req, res, next) => {
+  try {
+    // Vérification de l'autorisation
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+
+    let bookObject = req.files && req.files.image ? JSON.parse(req.body.book) : req.body;
+
+    // Si une nouvelle image est fournie
+    if (req.files && req.files.image) {
+      // Récupération du livre actuel pour supprimer l'ancienne image
+      const book = await Book.findOne({ _id: req.params.id });
+      const filename = book.imageUrl.split(`/${process.env.IMG_PATH}`)[1];
+
+      // Suppression de l'ancienne image
       fs.unlink(`images/${filename}`, (err) => {
         if (err) {
-          console.error(`Erreur lors de la suppression de l'ancienne image : ${err}`);
+          return res.status(400).json({ message: `Erreur lors de la suppression de l'ancienne image : ${err}`});
         }
       });
-    })
-    .catch(error => res.status(500).json({error}));
-    compressImage(req.files.image)
-      .then(({ outputPath }) => {
 
-        // Log pour vérifier les valeurs envoyées à MongoDB
-        const updatedBookData = {
-          ...bookObject,
-          _id: req.params.id,
-          imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
-        };
-        
-        console.log("Données mises à jour du livre : ", updatedBookData);
-        
-        return Book.updateOne(
-          { _id: req.params.id },
-          updatedBookData
-        );
-      })
-      .then(() => {
-        console.log("Mise à jour du livre réussie avec la nouvelle URL de l'image");
-        res.status(201).json({ message: "Livre modifié avec succès !" });
-      })
-      .catch(error => {
-        console.error("Erreur lors de la mise à jour du livre avec la nouvelle image :", error);
-        res.status(400).json({ error });
-      });
-  } else {
-    let bookObject = req.body;
-    // Si aucune nouvelle image n'est fournie
-    Book.updateOne(
-      { _id: req.params.id },
-      { ...bookObject, _id: req.params.id }
-    )
-      .then(() => {
-        console.log("Livre mis à jour sans nouvelle image.");
-        res.status(201).json({ message: "Livre modifié sans nouvelle image !" });
-      })
-      .catch(error => {
-        console.error("Erreur lors de la mise à jour sans image :", error);
-        res.status(400).json({ error });
-      });
+      // Compression de la nouvelle image
+      const { outputPath } = await compressImage(req.files.image);
+
+      // Mise à jour du livre avec la nouvelle image
+      const updatedBookData = {
+        ...bookObject,
+        _id: req.params.id,
+        imageUrl: `${req.protocol}://${req.get('host')}/${outputPath}`
+      };
+
+      await Book.updateOne({ _id: req.params.id }, updatedBookData);
+      return res.status(201).json({ message: "Livre modifié avec succès !" });
+    } else {
+      // Si aucune nouvelle image n'est fournie
+      await Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id });
+      return res.status(201).json({ message: "Livre modifié avec succès !" });
+    }
+  } catch (error) {
+    return res.status(500).json({ error });
   }
 };
 
 exports.deleteBook = (req, res, next) => {
   Book.findOne({_id: req.params.id})
     .then(book => {
-      const filename = book.imageUrl.split('/images/')[1];
-      fs.unlink(`images/${filename}`, () => {
+      const filename = book.imageUrl.split(`/${process.env.IMG_PATH}`)[1];
+      fs.unlink(process.env.IMG_PATH + filename, () => {
         Book.deleteOne({_id: req.params.id})
           .then(() => {res.status(200).json({message: "Livre supprimé !"})})
           .catch(error => res.status(401).json({error}));
@@ -142,32 +117,39 @@ exports.getBestRatingBooks = (req, res, next) => {
     .catch(error => res.status(400).json(error));
 }
 
-exports.createRating = (req, res, next) => {
-  if ( req.body.rating < 0 || req.body.rating > 5 ) {
-    return res.status(400).json({ message : 'La note doit être comprise entre 0 et 5'})
+exports.createRating = async (req, res, next) => {
+  try {
+    // Vérification de la validité de la note
+    if (req.body.rating < 0 || req.body.rating > 5) {
+      return res.status(400).json({ message: 'La note doit être comprise entre 0 et 5' });
+    }
+
+    // Récupérer le livre par son ID
+    const book = await Book.findOne({ _id: req.params.id });
+
+    if (!book) {
+      return res.status(404).json({ message: 'Livre non trouvé' });
+    }
+
+    // Vérification si l'utilisateur a déjà noté ce livre
+    const existingRating = book.ratings.find(rate => rate.userId === req.auth.userId);
+
+    if (existingRating) {
+      return res.status(400).json({ message: 'Vous avez déjà voté' });
+    }
+
+    // Ajout de la nouvelle note
+    book.ratings.push({ userId: req.auth.userId, grade: Math.round(req.body.rating) });
+
+    // Calcul de la nouvelle moyenne
+    const totalRatings = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
+    book.averageRating = Math.round(totalRatings / book.ratings.length);
+
+    // Sauvegarde des modifications
+    const updatedBook = await book.save();
+
+    res.status(201).json(updatedBook);
+  } catch (error) {
+    res.status(400).json({ error });
   }
-  
-  Book.findOne({ _id: req.params.id })
-    .then((book) => {
-      // Vérification si l'utilisateur a déjà noté ce livre
-      const existingRating = book.ratings.find(rate => rate.userId === req.auth.userId);
-
-      if (existingRating) {
-        return res.status(400).json({ message: 'Vous avez déjà voté' });
-
-      } else {
-        // Ajout de la nouvelle note
-        book.ratings.push({ userId: req.auth.userId, grade: Math.round(req.body.rating) });
-
-        // Calcul de la nouvelle moyenne
-        const totalRatings = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
-        book.averageRating = Math.round(totalRatings / book.ratings.length);
-        console.log("book.averageRating : ", book.averageRating);
-
-        // Sauvegarde des modifications
-        return book.save();
-      }
-    })
-    .then((updatedBook) => res.status(201).json(updatedBook))
-    .catch(error => res.status(400).json({ error }));
 };
