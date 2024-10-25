@@ -16,6 +16,12 @@ exports.createBook = async (req, res, next) => {
     delete bookObject._id;
     delete bookObject._userId;
 
+    for (const field of Object.keys(bookObject)) {
+      if (typeof bookObject[field] === 'string') {
+        bookObject[field] = bookObject[field].trim(); // Retire les espaces
+      }
+    }
+
     // Vérification de la présence du fichier
     if (!req.files || !req.files.image) {
       throw new FileTypeError();
@@ -69,6 +75,12 @@ exports.modifyBook = async (req, res, next) => {
 
     let bookObject = req.files && req.files.image ? JSON.parse(req.body.book) : req.body;
 
+    for (const field of Object.keys(bookObject)) {
+      if (typeof bookObject[field] === 'string') {
+        bookObject[field] = bookObject[field].trim(); // Retire les espaces
+      }
+    }
+    
     // Liste des champs requis
     const requiredFields = ['title', 'author', 'year', 'genre']; 
 
