@@ -1,4 +1,4 @@
-![Made with JavaScript](https://img.shields.io/badge/Made_with-JavaScript-F7DF1E?logo=javascript&logoColor=F7DF1E&style=for-the-badge)
+![JavaScript](https://img.shields.io/badge/Fait%20avec-JavaScript-yellow?logo=javascript)
 ![MongoDB](https://img.shields.io/badge/Fait%20avec-MongoDB-brightgreen?logo=mongodb)
 ![Node.js](https://img.shields.io/badge/Fait%20avec-Node.js-green?logo=node.js)
 ![Express](https://img.shields.io/badge/Fait%20avec-Express-black?logo=express)
