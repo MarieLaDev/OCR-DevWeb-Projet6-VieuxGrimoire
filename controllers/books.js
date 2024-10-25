@@ -15,6 +15,32 @@ exports.createBook = async (req, res, next) => {
     delete bookObject._id;
     delete bookObject._userId;
 
+    // Vérification de la présence du fichier
+    if (!req.files || !req.files.image) {
+      return res.status(400).json({ message: "Vous devez télécharger une image." });
+    }
+
+    // Liste des champs requis
+    const requiredFields = ['title', 'author', 'year', 'genre']; 
+
+    // Vérification de la présence de tous les champs requis
+    const missingFields = requiredFields.filter(field => !bookObject[field]);
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Vous devez remplir tous les champs. Champs Manquants : ${missingFields.join(", ")}`);
+    }
+
+    // Obtenir l'année actuelle
+    const currentYear = new Date().getFullYear();
+    
+    const year = Number(bookObject.year);
+
+    // Vérification de l'année : Nombre ? entre 1000 et l'année actuelle ?
+    if (isNaN(year) || year <= 1000 || year > currentYear) {
+      console.log("Erreur : année invalide");
+      throw new Error("L'année doit être un nombre supérieur à 1000 et inférieur ou égal à l'année en cours.");
+    }
+
     // Compression de l'image
     const { outputPath } = await compressImage(req.files.image);
 
@@ -30,7 +56,8 @@ exports.createBook = async (req, res, next) => {
 
     res.status(201).json({ message: "Livre enregistré !" });
   } catch (error) {
-    res.status(400).json({ message: 'Erreur lors de l\'enregistrement du livre.' });
+    console.error("Erreur dans le bloc catch :", error.message);
+    res.status(400).json({ message: error.message });
   }
 };
 
