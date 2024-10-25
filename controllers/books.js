@@ -3,12 +3,13 @@ const Book = require('../models/books');
 const fs = require('fs');
 const compressImage = require('../middleware/compressImage');
 require('dotenv').config();
+const { missingFiled, yearError, FileTypeError, loginError, ratingError } = require('../utils/errors');
 
 
 exports.createBook = async (req, res, next) => {
   try {
     if (!req.auth || !req.auth.userId) {
-      return res.status(401).json({ message: "Non autorisé" });
+      throw new loginError();
     }
 
     const bookObject = JSON.parse(req.body.book);
@@ -17,7 +18,7 @@ exports.createBook = async (req, res, next) => {
 
     // Vérification de la présence du fichier
     if (!req.files || !req.files.image) {
-      return res.status(400).json({ message: "Vous devez télécharger une image." });
+      throw new FileTypeError();
     }
 
     // Liste des champs requis
@@ -27,7 +28,7 @@ exports.createBook = async (req, res, next) => {
     const missingFields = requiredFields.filter(field => !bookObject[field]);
     
     if (missingFields.length > 0) {
-      throw new Error(`Vous devez remplir tous les champs. Champs Manquants : ${missingFields.join(", ")}`);
+      throw new missingFiled(missingFields);
     }
 
     // Obtenir l'année actuelle
@@ -37,8 +38,7 @@ exports.createBook = async (req, res, next) => {
 
     // Vérification de l'année : Nombre ? entre 1000 et l'année actuelle ?
     if (isNaN(year) || year <= 1000 || year > currentYear) {
-      console.log("Erreur : année invalide");
-      throw new Error("L'année doit être un nombre supérieur à 1000 et inférieur ou égal à l'année en cours.");
+      throw new yearError(bookObject.year);
     }
 
     // Compression de l'image
@@ -56,8 +56,7 @@ exports.createBook = async (req, res, next) => {
 
     res.status(201).json({ message: "Livre enregistré !" });
   } catch (error) {
-    console.error("Erreur dans le bloc catch :", error.message);
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
@@ -65,11 +64,31 @@ exports.modifyBook = async (req, res, next) => {
   try {
     // Vérification de l'autorisation
     if (!req.auth || !req.auth.userId) {
-      return res.status(401).json({ message: "Non autorisé" });
+      throw new loginError();
     }
 
     let bookObject = req.files && req.files.image ? JSON.parse(req.body.book) : req.body;
 
+    // Liste des champs requis
+    const requiredFields = ['title', 'author', 'year', 'genre']; 
+
+    // Vérification de la présence de tous les champs requis
+    const missingFields = requiredFields.filter(field => !bookObject[field]);
+    
+    if (missingFields.length > 0) {
+      throw new missingFiled(missingFields);
+    }
+
+    // Obtenir l'année actuelle
+    const currentYear = new Date().getFullYear();
+    
+    const year = Number(bookObject.year);
+
+    // Vérification de l'année : Nombre ? entre 1000 et l'année actuelle ?
+    if (isNaN(year) || year <= 1000 || year > currentYear) {
+      throw new yearError(bookObject.year);
+    }
+    
     // Si une nouvelle image est fournie
     if (req.files && req.files.image) {
       // Récupération du livre actuel pour supprimer l'ancienne image
@@ -101,7 +120,7 @@ exports.modifyBook = async (req, res, next) => {
       return res.status(201).json({ message: "Livre modifié avec succès !" });
     }
   } catch (error) {
-    return res.status(500).json({ error });
+    next(error);
   }
 };
 
@@ -148,7 +167,7 @@ exports.createRating = async (req, res, next) => {
   try {
     // Vérification de la validité de la note
     if (req.body.rating < 0 || req.body.rating > 5) {
-      return res.status(400).json({ message: 'La note doit être comprise entre 0 et 5' });
+      throw new ratingError();
     }
 
     // Récupérer le livre par son ID
@@ -177,6 +196,6 @@ exports.createRating = async (req, res, next) => {
 
     res.status(201).json(updatedBook);
   } catch (error) {
-    res.status(400).json({ error });
+    next(error);
   }
 };

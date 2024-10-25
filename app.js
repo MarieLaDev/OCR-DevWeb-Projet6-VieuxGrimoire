@@ -5,6 +5,7 @@ require('dotenv').config();
 const booksRoutes = require('./routes/books');
 const userRoutes = require('./routes/user');
 const { reqLimit } = require('./middleware/reqLimit');
+const errorMiddleware = require('./middleware/errorsMiddleware');
 const path = require('path');
 const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require("helmet");
@@ -51,5 +52,7 @@ app.use((req, res, next) => {
 
 app.use('/api/books', booksRoutes);
 app.use('/api/auth', userRoutes);
+
+app.use(errorMiddleware);
 
 module.exports = app;
