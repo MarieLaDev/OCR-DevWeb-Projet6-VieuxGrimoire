@@ -17,7 +17,7 @@ class FileTypeError extends CustomError {
 }
 class missingFiled extends CustomError {
   constructor(missingFields = []) {
-    const message = `Vous devez remplir tous les champs. Champs Manquants : ${missingFields.join(", ")}`;
+    const message = `Vous devez remplir tous les champs. Champ(s) Manquant(s) : ${missingFields.join(", ")}`;
     super(message, 400);
   }
 }
