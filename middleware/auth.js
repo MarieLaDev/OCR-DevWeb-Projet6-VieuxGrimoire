@@ -5,7 +5,6 @@ require('dotenv').config();
 // Middleware d'authentification => intercepte chaque requête faisant appel à 'auth', vérfie si le token est valide puis passe à la requête suivante ou renvoie un 401 
 module.exports = (req, res, next) => {
   try {
-    console.log(req.headers.authorization);
     if (req.headers.authorization === "Bearer null") {
       throw new loginError();
     }
