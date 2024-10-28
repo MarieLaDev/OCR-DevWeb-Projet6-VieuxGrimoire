@@ -80,7 +80,7 @@ exports.modifyBook = async (req, res, next) => {
         bookObject[field] = bookObject[field].trim(); // Retire les espaces
       }
     }
-    
+
     // Liste des champs requis
     const requiredFields = ['title', 'author', 'year', 'genre']; 
 
